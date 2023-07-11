@@ -235,9 +235,3 @@ STOMP is also supported by the [Spring Framework](https://en.wikipedia.org/wiki/
 
    配合配置类，客户端通过destination：/app/hello 发送消息给服务端，服务端则推送消息给订阅destination：/topic/greetings 的客户端。
 
-
-
-stomp相关概念：
-
-1. 服务端怎么定点发送给客户端？
-
