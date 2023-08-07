@@ -45,17 +45,44 @@
 3. mysql-binlog-connector
 
    - 概念：jar包，用来连接MySQL并获取BinLog。
+
    - 原理：同canal，模拟MySQL slave的交换协议，将自己伪装成slave，从master获取binary log然后解析。
+
    - 优点：项目内引入依赖就可以集成。自动重连、实时获取事件更新。
+
    - 缺点：如果多个业务模块需要订阅binlog日志，则会产生多个slave，进而给master带来更多的网络开销。
+
    - 特性：
      - 建立连接后，从最新BinLog文件的最后位置开始解析。也支持指定BinLog文件指定位置。
      - 支持TLS安全连接。
      - 不支持订阅部分数据库、表的事件，参考社区回答： [How to get events for specified set of tables · Issue #132 ](https://github.com/shyiko/mysql-binlog-connector-java/issues/132) 
+     
+   - 性能分析
+
+     
+
+     | 并发量 | 耗时 | CPU负载 | 内存负载 |
+     | ------ | ---- | ------- | -------- |
+     | 千     |      |         |          |
+     | 万     |      |         |          |
+     | 十万   |      |         |          |
+
    - ·问题
      - 性能测试
+       - 不连接binlog，cpu、内存负载
+       - 连接binlog，cpu、内存负载
+       - 一次性更新1000条数据，cpu、内存负载
+       - 一次性更新10000条数据，cpu、内存负载
+       - 解析10000条数据的耗时
+         - 耗时
+         - CPU负载
+         - 内存负载
+       - 怎么感觉反序列化改不改没啥用呢？
+       - itask数据改下
      - 看完issues
      - 能否只订阅部分库部分表的事件？
+     - 多副本，是多个slave吗？他们怎么处理所有事件？
+     
    - 待办
      - 再多看些文章多了解下这个技术。
        - 序列化是怎么回事儿？
@@ -66,6 +93,7 @@
      - 性能测试，怎么做？
      - 讨论row模式下，binlog_row_image 要不要改成 minimal
      - 写下ppt
+     
    - 参考文献：
      - [Java监听mysql的binlog详解(mysql-binlog-connector)](https://blog.csdn.net/m0_37583655/article/details/119148470) 
      - [GitHub - shyiko/mysql-binlog-connector-java: MySQL Binary Log connector](https://github.com/shyiko/mysql-binlog-connector-java) 
