@@ -30,7 +30,7 @@
 
    - 优点：相对稳定，经过阿里复杂场景以及高并发的验证。
 
-   - 缺点：运维成本较高，需要单独部署后端服务。
+   - 缺点：运维成本较高，需要单独部署canal后端服务，且HA部署依赖zookeeper。
 
    - 问题：
 
@@ -39,61 +39,31 @@
    - 参考文献：
 
      - [Canal监听mysql的binlog日志实现数据同步](https://blog.csdn.net/m0_37583655/article/details/119517336) 
+     - [Java订阅Binlog的几种方式 ](https://jasonkayzk.github.io/2023/03/26/Java订阅Binlog的几种方式/)
 
    
 
 3. mysql-binlog-connector
 
    - 概念：jar包，用来连接MySQL并获取BinLog。
-
    - 原理：同canal，模拟MySQL slave的交换协议，将自己伪装成slave，从master获取binary log然后解析。
-
    - 优点：项目内引入依赖就可以集成。自动重连、实时获取事件更新。
-
    - 缺点：如果多个业务模块需要订阅binlog日志，则会产生多个slave，进而给master带来更多的网络开销。
-
    - 特性：
      - 建立连接后，从最新BinLog文件的最后位置开始解析。也支持指定BinLog文件指定位置。
-     - 支持TLS安全连接。
      - 不支持订阅部分数据库、表的事件，参考社区回答： [How to get events for specified set of tables · Issue #132 ](https://github.com/shyiko/mysql-binlog-connector-java/issues/132) 
-     
-   - 性能分析
-
-     
-
-     | 并发量 | 耗时 | CPU负载 | 内存负载 |
-     | ------ | ---- | ------- | -------- |
-     | 千     |      |         |          |
-     | 万     |      |         |          |
-     | 十万   |      |         |          |
-
-   - ·问题
-     - 性能测试
-       - 不连接binlog，cpu、内存负载
-       - 连接binlog，cpu、内存负载
-       - 一次性更新1000条数据，cpu、内存负载
-       - 一次性更新10000条数据，cpu、内存负载
-       - 解析10000条数据的耗时
-         - 耗时
-         - CPU负载
-         - 内存负载
-       - 怎么感觉反序列化改不改没啥用呢？
-       - itask数据改下
-     - 看完issues
-     - 能否只订阅部分库部分表的事件？
-     - 多副本，是多个slave吗？他们怎么处理所有事件？
-     
+   - 问题
+     - iresource-common多副本会怎样？
+       1. 会产生多个slave。
+       2. 每个副本会订阅到同一份binlog日志。
+       3. 每个副本解析到符合条件的binlog事件之后，推送消息给各自的客户端。
    - 待办
-     - 再多看些文章多了解下这个技术。
-       - 序列化是怎么回事儿？
+     - 写下ppt
+     - 配置文件改下，不能写死了
      - 代码放到iresource-common里
-     - 写下集成步骤
      - iresource-common账号赋读取binlog的权限：`Repl_slave_priv`，`Repl_client_priv`。
      - 配置线程池，多线程消费符合条件的BinLog的event
-     - 性能测试，怎么做？
-     - 讨论row模式下，binlog_row_image 要不要改成 minimal
-     - 写下ppt
-     
+     - 是否需要在服务重启后，从上一次关闭时的binlog位置继续处理
    - 参考文献：
      - [Java监听mysql的binlog详解(mysql-binlog-connector)](https://blog.csdn.net/m0_37583655/article/details/119148470) 
      - [GitHub - shyiko/mysql-binlog-connector-java: MySQL Binary Log connector](https://github.com/shyiko/mysql-binlog-connector-java) 
