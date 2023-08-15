@@ -58,7 +58,6 @@
        2. 每个副本会订阅到同一份binlog日志。
        3. 每个副本解析到符合条件的binlog事件之后，推送消息给各自的客户端。
    - 待办
-     - 写下ppt
      - 配置文件改下，不能写死了
      - 代码放到iresource-common里
      - iresource-common账号赋读取binlog的权限：`Repl_slave_priv`，`Repl_client_priv`。
