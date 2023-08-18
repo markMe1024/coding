@@ -231,7 +231,18 @@ STOMP is also supported by the [Spring Framework](https://en.wikipedia.org/wiki/
      }
    
    }
-    ```
+   ```
 
    配合配置类，客户端通过destination：/app/hello 发送消息给服务端，服务端则推送消息给订阅destination：/topic/greetings 的客户端。
 
+
+
+**参考资料：**
+
+- [Web端即时通讯实践干货：如何让WebSocket断网重连更快速？](http://www.52im.net/thread-3098-1-1.html) 
+- [新手入门贴：史上最全Web端即时通讯技术原理详解](http://www.52im.net/thread-338-1-1.html) 
+
+- [使用WebSocket和SSE技术实现Web端消息推送](http://www.52im.net/thread-907-1-1.html) 
+
+- [推送开发，专项技术区](http://www.52im.net/forum-104-1.html) 
+- [爱奇艺WebSocket实时推送网关技术实践](http://www.52im.net/thread-3539-1-1.html)
