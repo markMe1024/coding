@@ -14,20 +14,23 @@
    # binlog listener
    binlog:
      datasource:
-       host: 100.2.216.244
-       port: 33306
-       username: root
-       password: incloudmanager123456a?
-     db: iresource
-     tables: t_net_net,t_net_subnet,t_resource_update   # 多张表用英文逗号分隔
+       url: ${incloud.common.db.url}
+       username: ${incloud.iresource-common.db.username}
+       password: ${incloud.iresource-common.db.password}
+     dbTables: '{"iresource": "t_net_net, t_net_subnet"}'
    ```
-
+   
 3. 创建枚举类，存储步骤2配置信息
 
    ```java
+   package com.inspur.incloud.iresource.model.binlog;
+   
    import lombok.Data;
    import org.springframework.beans.factory.annotation.Value;
    import org.springframework.stereotype.Component;
+   
+   import javax.annotation.PostConstruct;
+   import java.util.Map;
    
    /**
     * 监听配置信息
@@ -38,11 +41,12 @@
    @Component
    public class BinLogConstants {
    
-       @Value("${binlog.datasource.host}")
        private String host;
    
-       @Value("${binlog.datasource.port}")
        private int port;
+   
+       @Value("${binlog.datasource.url}")
+       private String url;
    
        @Value("${binlog.datasource.username}")
        private String username;
@@ -50,12 +54,14 @@
        @Value("${binlog.datasource.password}")
        private String password;
    
-       @Value("${binlog.db}")
-       private String db;
+       @Value("#{${binlog.dbTables}}")
+       private Map<String, String> dbTablesMap;
    
-       @Value("${binlog.tables}")
-       private String tables;
-   
+       @PostConstruct
+       public void splitUrl() {
+           this.host = url.split(":")[0];
+           this.port = Integer.parseInt(url.split(":")[1]);
+       }
    }
    ```
 
@@ -110,6 +116,8 @@
 5. 创建实体类，存储BinLog解析后数据条目信息
 
    ```java
+   package com.inspur.incloud.iresource.model.binlog;
+   
    import com.github.shyiko.mysql.binlog.event.EventType;
    import com.google.common.collect.Maps;
    import lombok.Data;
@@ -182,16 +190,19 @@
        }
    
    }
+   
    ```
 
 6. 创建Binlog工具类
 
    ```java
+   package com.inspur.incloud.iresource.util.binlog;
+   
    import cn.hutool.core.util.StrUtil;
    import com.github.shyiko.mysql.binlog.event.EventType;
-   import com.inspur.incloud.inetwork.enums.binlog.BinLogConstants;
-   import com.inspur.incloud.inetwork.model.binlog.BinLogItem;
-   import com.inspur.incloud.inetwork.model.binlog.DbColumn;
+   import com.inspur.incloud.iresource.model.binlog.BinLogConstants;
+   import com.inspur.incloud.iresource.model.binlog.BinLogItem;
+   import com.inspur.incloud.iresource.model.binlog.DbColumn;
    import lombok.extern.slf4j.Slf4j;
    import org.springframework.stereotype.Component;
    
@@ -295,6 +306,8 @@
 7. 创建数据库监听器
 
    ```java
+   package com.inspur.incloud.iresource.listener;
+   
    import com.github.shyiko.mysql.binlog.BinaryLogClient;
    import com.github.shyiko.mysql.binlog.event.Event;
    import com.github.shyiko.mysql.binlog.event.EventType;
@@ -302,17 +315,18 @@
    import com.github.shyiko.mysql.binlog.event.UpdateRowsEventData;
    import com.github.shyiko.mysql.binlog.event.deserialization.EventDeserializer;
    import com.github.shyiko.mysql.binlog.event.deserialization.NullEventDataDeserializer;
-   import com.inspur.incloud.inetwork.enums.binlog.BinLogConstants;
-   import com.inspur.incloud.inetwork.model.binlog.BinLogItem;
-   import com.inspur.incloud.inetwork.model.binlog.DbColumn;
-   import com.inspur.incloud.inetwork.utils.binlog.BinLogUtils;
+   import com.inspur.incloud.common.util.IpUtil;
+   import com.inspur.incloud.iresource.model.binlog.BinLogConstants;
+   import com.inspur.incloud.iresource.model.binlog.BinLogItem;
+   import com.inspur.incloud.iresource.model.binlog.DbColumn;
+   import com.inspur.incloud.iresource.util.binlog.BinLogUtils;
    import lombok.extern.slf4j.Slf4j;
    
    import java.io.IOException;
    import java.io.Serializable;
-   import java.util.HashMap;
+   import java.net.InetAddress;
+   import java.net.UnknownHostException;
    import java.util.Map;
-   import java.util.Random;
    import java.util.concurrent.ConcurrentHashMap;
    
    import static com.github.shyiko.mysql.binlog.event.EventType.isUpdate;
@@ -355,7 +369,13 @@
            binLogClient.setEventDeserializer(eventDeserializer);
    
            // 多副本时，需为各副本设置不同serverId
-           binLogClient.setServerId(Long.parseLong(String.valueOf(System.nanoTime()).substring(5) + "" + new Random().nextInt(99999)));
+           try {
+               final String hostAddress = InetAddress.getLocalHost().getHostAddress();
+               final long serverId = IpUtil.ipToLong(hostAddress);
+               binLogClient.setServerId(serverId);
+           } catch (UnknownHostException e) {
+               log.error(e.getMessage(), e);
+           }
    
            this.binLogClient = binLogClient;
    
@@ -483,9 +503,10 @@
 8. 创建Binlog配置类
 
    ```java
-   import cn.hutool.core.util.StrUtil;
-   import com.inspur.incloud.inetwork.enums.binlog.BinLogConstants;
-   import com.inspur.incloud.inetwork.listener.binlog.MysqlBinLogListener;
+   package com.inspur.incloud.iresource.config;
+   
+   import com.inspur.incloud.iresource.listener.MysqlBinLogListener;
+   import com.inspur.incloud.iresource.model.binlog.BinLogConstants;
    import lombok.extern.slf4j.Slf4j;
    import org.springframework.boot.CommandLineRunner;
    import org.springframework.core.annotation.Order;
@@ -495,6 +516,7 @@
    import java.io.IOException;
    import java.util.Arrays;
    import java.util.List;
+   import java.util.Map;
    
    /**
     * BinLog配置类
@@ -515,10 +537,9 @@
            MysqlBinLogListener mysqlBinLogListener = new MysqlBinLogListener(binLogConstants);
    
            // 注册监听
-           final String db = binLogConstants.getDb();
-           final String tables = binLogConstants.getTables();
-           if (StrUtil.isNotEmpty(tables)) {
-               List<String> tableList = Arrays.asList(tables.split(","));
+           final Map<String, String> dbTablesMap = binLogConstants.getDbTablesMap();
+           for (String db : dbTablesMap.keySet()) {
+               List<String> tableList = Arrays.asList(dbTablesMap.get(db).split(","));
                tableList.forEach(table -> {
                    try {
                        mysqlBinLogListener.regListener(db, table);
@@ -532,7 +553,7 @@
            mysqlBinLogListener.connect();
        }
    }
-   ```
-
+```
+   
    
 
