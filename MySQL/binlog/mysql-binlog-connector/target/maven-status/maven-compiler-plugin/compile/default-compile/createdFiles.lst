@@ -1,0 +1,6 @@
+com\inspur\incloud\binlog\model\DbColumn.class
+com\inspur\incloud\binlog\listener\EventListener$MyLifecycleListener.class
+com\inspur\incloud\binlog\model\BinLogItem.class
+com\inspur\incloud\binlog\constants\BinLogConstants.class
+com\inspur\incloud\binlog\util\BinLogUtils.class
+com\inspur\incloud\binlog\listener\EventListener.class
