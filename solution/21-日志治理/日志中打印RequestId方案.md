@@ -119,10 +119,16 @@
    }
    ```
 
-   
+
+
+
+**开源解决方案：[TLog](https://tlog.yomahub.com/pages/5b7bd2/)**
 
 
 
 备注：
 
 1. 如果希望自开启线程中打印RequestId，需要侵入到具体业务处理。
+
+
+
